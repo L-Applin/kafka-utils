@@ -22,7 +22,6 @@ public class SingleRecordDelayTransformer<K, V> implements Transformer<K, V, Key
 
     @Override
     public void init(ProcessorContext processorContext) {
-        log.info("INIT CONTEXT");
        this.ctx = processorContext;
     }
 
