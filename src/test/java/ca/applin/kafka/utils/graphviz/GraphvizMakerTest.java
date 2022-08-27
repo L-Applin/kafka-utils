@@ -36,7 +36,7 @@ class GraphvizMakerTest {
                 .to("redirect-topic");
 
         File testFile = new File("src/test/resources/test-topology.dot");
-
+        testFile.createNewFile();
         GraphvizMaker graphviz = new GraphvizMaker(new PrintStream(testFile));
         final Topology topology = sb.build();
         log.info("{}", topology.describe());
