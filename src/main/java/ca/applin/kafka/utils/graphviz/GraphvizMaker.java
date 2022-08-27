@@ -61,9 +61,9 @@ public class GraphvizMaker {
                 }
                 node.successors().forEach(succ -> makeDirectedEdge(node.name(), succ.name()));
             }
-            output(" } ");
+            output("} ");
         });
-        output(" }");
+        output("}");
         ps.flush();
     }
 
