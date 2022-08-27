@@ -28,10 +28,10 @@ class GraphvizMakerTest {
                 "\"async_retry_split.dlt\"->\"branch_dlt\"; \"async_retry_split.out_1\" [class=\"processor\"]; " +
                 "\"async_retry_split.out_1\"->\"branch_1\"; \"async_retry_split.retry\" [class=\"processor\"]; " +
                 "\"async_retry_split.retry\"->\"branch_retry\"; \"branch_1\" [label=\"sink:output_branch\",class=\"sink\"]; " +
-                "\"branch_dlt\" [label=\"sink:dlt\",class=\"sink\"]; \"branch_retry\" [label=\"sink:retry_topic\",class=\"sink\"];  } " +
+                "\"branch_dlt\" [label=\"sink:dlt\",class=\"sink\"]; \"branch_retry\" [label=\"sink:retry_topic\",class=\"sink\"]; } " +
                 "subgraph Sub_topology_1 { \"retry_in\" [label=\"source:retry_topic\",class=\"source\"]; \"retry_in\"->\"delay_5sec\"; " +
                 "\"delay_5sec\" [class=\"processor\"]; \"delay_5sec\"->\"log_value\"; \"log_value\" [class=\"processor\"]; " +
-                "\"log_value\"->\"redirect_out\"; \"redirect_out\" [label=\"sink:redirect_topic\",class=\"sink\"];  }  }";
+                "\"log_value\"->\"redirect_out\"; \"redirect_out\" [label=\"sink:redirect_topic\",class=\"sink\"]; } }";
 
     @Test
     void makeSimpleGraph() {
