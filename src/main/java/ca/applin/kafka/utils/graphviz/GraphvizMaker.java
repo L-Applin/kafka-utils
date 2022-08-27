@@ -13,6 +13,8 @@ import java.util.Set;
 /**
  * Takes a kafka streams {@link Topology topology} and creates a Graphviz file representing that topology.
  *
+ * The classes 'source', 'sink' and 'processor' are added respectively to nodes of the corresponding type
+ * of the Topology.
  *
  * @see <a href="https://graphviz.org/">Graphviz</a>
  * @author L-Applin
@@ -66,13 +68,15 @@ public class GraphvizMaker {
     }
 
     private void makeNode(TopologyDescription.Processor processor) {
-        output(processor.name());
+
+        log.info("{}", processor);
+        output("\"" + processor.name() + "\"");
         makeAttributes(new GraphvizAttr(ATTR_CLASS, PROCESSOR));
         output("; ");
     }
 
     private void makeNode(TopologyDescription.Sink sink) {
-        output(sink.name());
+        output("\"" + sink.name() + "\"");
         makeAttributes(
                 new GraphvizAttr(ATTR_LABEL, SINK + ":" + sink.topic()),
                 new GraphvizAttr(ATTR_CLASS, SINK));
@@ -80,9 +84,9 @@ public class GraphvizMaker {
     }
 
     private void makeNode(TopologyDescription.Source source) {
-        output(source.name());
+        output("\"" + source.name() + "\"");
         String topicStr = source.topicPattern() == null
-                ? String.join(",", source.topicSet()) + ""
+                ? String.join(",", source.topicSet())
                 : source.topicPattern().pattern();
         makeAttributes(
                 new GraphvizAttr(ATTR_LABEL, SOURCE + ":" + topicStr),
@@ -91,9 +95,9 @@ public class GraphvizMaker {
     }
 
     private void makeDirectedEdge(String from, String to) {
-        output(from);
-        ps.print("->");
-        output(to + "; ");
+        output("\"" + from + "\"");
+        ps.print("->"); // '->' should not be replaced with '_>'
+        output("\"" + to + "\"" + "; ");
     }
 
     private void makeAttributes(GraphvizAttr... attrs) {

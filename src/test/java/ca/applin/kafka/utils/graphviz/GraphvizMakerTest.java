@@ -19,39 +19,36 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class GraphvizMakerTest {
 
     private static final String EXPECTED_GRAPH =
-            "digraph { subgraph Sub_topology_0 { KSTREAM_SOURCE_0000000000 " +
-            "[label=\"source:in_topic_1\",class=\"source\"]; KSTREAM_SOURCE_0000000000->KSTREAM_MERGE_0000000002; " +
-            "KSTREAM_SOURCE_0000000001 [label=\"source:redirect_topic\",class=\"source\"]; " +
-            "KSTREAM_SOURCE_0000000001->KSTREAM_MERGE_0000000002; KSTREAM_MERGE_0000000002 " +
-            "[class=\"processor\"]; KSTREAM_MERGE_0000000002->proc_1; proc_1 [class=\"processor\"]; " +
-            "proc_1->KSTREAM_BRANCH_0000000004; KSTREAM_BRANCH_0000000004 [class=\"processor\"]; " +
-            "KSTREAM_BRANCH_0000000004->KSTREAM_BRANCH_00000000042; KSTREAM_BRANCH_0000000004->KSTREAM_BRANCH_0000000004out_1; " +
-            "KSTREAM_BRANCH_0000000004->KSTREAM_BRANCH_00000000040; KSTREAM_BRANCH_00000000040 [class=\"processor\"]; " +
-            "KSTREAM_BRANCH_00000000040->KSTREAM_SINK_0000000010; KSTREAM_BRANCH_00000000042 [class=\"processor\"]; " +
-            "KSTREAM_BRANCH_00000000042->KSTREAM_SINK_0000000008; KSTREAM_BRANCH_0000000004out_1 [class=\"processor\"]; " +
-            "KSTREAM_BRANCH_0000000004out_1->KSTREAM_SINK_0000000006; KSTREAM_SINK_0000000006 [label=\"sink:output_branch\",class=\"sink\"]; " +
-            "KSTREAM_SINK_0000000008 [label=\"sink:retry_topic\",class=\"sink\"]; KSTREAM_SINK_0000000010 [label=\"sink:dlt\",class=\"sink\"];  } " +
-            "subgraph Sub_topology_1 { KSTREAM_SOURCE_0000000011 [label=\"source:retry_topic\",class=\"source\"]; " +
-            "KSTREAM_SOURCE_0000000011->delay_5sec; delay_5sec [class=\"processor\"]; delay_5sec->log_value; " +
-            "log_value [class=\"processor\"]; log_value->KSTREAM_SINK_0000000013; " +
-            "KSTREAM_SINK_0000000013 [label=\"sink:redirect_topic\",class=\"sink\"];  }  }";
+        "digraph { subgraph Sub_topology_0 { \"in_1\" [label=\"source:in_topic_1\",class=\"source\"]; \"in_1\"->\"merge_input\"; " +
+                "\"redirect_in\" [label=\"source:redirect_topic\",class=\"source\"]; \"redirect_in\"->\"merge_input\"; " +
+                "\"merge_input\" [class=\"processor\"]; \"merge_input\"->\"proc_1\"; \"proc_1\" [class=\"processor\"]; " +
+                "\"proc_1\"->\"async_retry_split.\"; \"async_retry_split.\" [class=\"processor\"]; " +
+                "\"async_retry_split.\"->\"async_retry_split.dlt\"; \"async_retry_split.\"->\"async_retry_split.out_1\"; " +
+                "\"async_retry_split.\"->\"async_retry_split.retry\"; \"async_retry_split.dlt\" [class=\"processor\"]; " +
+                "\"async_retry_split.dlt\"->\"branch_dlt\"; \"async_retry_split.out_1\" [class=\"processor\"]; " +
+                "\"async_retry_split.out_1\"->\"branch_1\"; \"async_retry_split.retry\" [class=\"processor\"]; " +
+                "\"async_retry_split.retry\"->\"branch_retry\"; \"branch_1\" [label=\"sink:output_branch\",class=\"sink\"]; " +
+                "\"branch_dlt\" [label=\"sink:dlt\",class=\"sink\"]; \"branch_retry\" [label=\"sink:retry_topic\",class=\"sink\"];  } " +
+                "subgraph Sub_topology_1 { \"retry_in\" [label=\"source:retry_topic\",class=\"source\"]; \"retry_in\"->\"delay_5sec\"; " +
+                "\"delay_5sec\" [class=\"processor\"]; \"delay_5sec\"->\"log_value\"; \"log_value\" [class=\"processor\"]; " +
+                "\"log_value\"->\"redirect_out\"; \"redirect_out\" [label=\"sink:redirect_topic\",class=\"sink\"];  }  }";
 
     @Test
     void makeSimpleGraph() {
         StreamsBuilder sb = new StreamsBuilder();
 
-        KStream<String, String> mainStream = sb.stream("in-topic-1", Consumed.with(String(), String()));
-        mainStream.merge(sb.stream("redirect-topic", Consumed.with(String(), String())))
+        KStream<String, String> mainStream = sb.stream("in-topic-1", Consumed.with(String(), String()).withName("in-1"));
+        mainStream.merge(sb.stream("redirect-topic", Consumed.with(String(), String()).withName("redirect-in")), Named.as("merge-input"))
                 .transformValues(DummyValueTranformer::new, Named.as("proc-1"))
-                .split()
-                .branch((k, v) -> k.length() < 10, Branched.<String, String>withConsumer(ks -> ks.to("output-branch")).withName("out-1"))
-                .branch((k, v) -> k.length() >= 10, Branched.withConsumer(ks -> ks.to("retry-topic")))
-                .defaultBranch(Branched.withConsumer(ks -> ks.to("dlt")));
+                .split(Named.as("async-retry-split."))
+                .branch((k, v) -> k.length() < 10, Branched.<String, String>withConsumer(ks -> ks.to("output-branch", Produced.as("branch-1"))).withName("out-1"))
+                .branch((k, v) -> k.length() >= 10, Branched.<String, String>withConsumer(ks -> ks.to("retry-topic", Produced.as("branch-retry"))).withName("retry"))
+                .defaultBranch(Branched.<String, String>withConsumer(ks -> ks.to("dlt", Produced.as("branch-dlt"))).withName("dlt"));
 
-        sb.stream("retry-topic")
+        sb.stream("retry-topic", Consumed.with(String(), String()).withName("retry-in"))
                 .transform(() -> new SingleRecordDelayTransformer<>(Duration.ofSeconds(5)), Named.as("delay-5sec"))
                 .peek((k, v) -> log.info("{}", v), Named.as("log-value"))
-                .to("redirect-topic");
+                .to("redirect-topic", Produced.as("redirect-out"));
 
         ByteArrayOutputStream baof = new ByteArrayOutputStream();
         GraphvizMaker graphviz = new GraphvizMaker(new PrintStream(baof));
