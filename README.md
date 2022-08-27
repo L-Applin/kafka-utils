@@ -1,2 +1,5 @@
 # kafka-utils
-kafka-utils is intended to help 
+
+# GraphvizMaker
+Creates graphviz file out of kafka-streams topology.
+

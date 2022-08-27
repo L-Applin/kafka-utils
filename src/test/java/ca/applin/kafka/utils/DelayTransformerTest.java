@@ -36,7 +36,7 @@ class DelayTransformerTest {
     }
 
     // test topology for the embedded kafka instance.
-    // simply reading from topic and pushig to aoutput topic with delay
+    // simply reading from topic and pushing to output topic with delay
     private Topology setupTopology(StreamsBuilder sb) {
         sb.<String, String>stream(IN_TOPIC_NAME)
             .transform(() -> new SingleRecordDelayTransformer<>(ofSeconds(5)))
